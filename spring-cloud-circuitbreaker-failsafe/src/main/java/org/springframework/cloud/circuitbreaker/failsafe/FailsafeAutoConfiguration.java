@@ -28,6 +28,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.circuitbreaker.commons.CircuitBreakerFactory;
 import org.springframework.cloud.circuitbreaker.commons.Customizer;
+import org.springframework.cloud.circuitbreaker.commons.ReactiveCircuitBreakerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -44,6 +45,14 @@ public class FailsafeAutoConfiguration {
 		return new FailsafeCircuitBreakerFactory();
 	}
 
+	@Bean
+	@ConditionalOnClass(
+		name = { "reactor.core.publisher.Mono", "reactor.core.publisher.Flux" })
+	@ConditionalOnMissingBean(ReactiveCircuitBreakerFactory.class)
+	public ReactiveCircuitBreakerFactory reactiveFailsafeCircuitBreakerFactory() {
+		return new ReactiveFailsafeCircuitBreakerFactory();
+	}
+
 	@Configuration
 	public static class FailsafeCustomizerConfiguration {
 
@@ -52,6 +61,22 @@ public class FailsafeAutoConfiguration {
 
 		@Autowired(required = false)
 		private FailsafeCircuitBreakerFactory factory;
+
+		@PostConstruct
+		public void init() {
+			customizers.forEach(customizer -> customizer.customize(factory));
+		}
+
+	}
+
+	@Configuration
+	public static class ReactiveFailsafeCustomizerConfiguration {
+
+		@Autowired(required = false)
+		private List<Customizer<ReactiveFailsafeCircuitBreakerFactory>> customizers = new ArrayList<>();
+
+		@Autowired(required = false)
+		private ReactiveFailsafeCircuitBreakerFactory factory;
 
 		@PostConstruct
 		public void init() {
