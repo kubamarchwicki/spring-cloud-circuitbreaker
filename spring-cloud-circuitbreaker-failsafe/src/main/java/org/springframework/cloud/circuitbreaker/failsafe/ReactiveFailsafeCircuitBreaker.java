@@ -21,13 +21,12 @@ import java.util.function.Function;
 
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.FailsafeExecutor;
-import net.jodah.failsafe.event.ExecutionAttemptedEvent;
-import net.jodah.failsafe.function.CheckedFunction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.circuitbreaker.commons.Customizer;
 import org.springframework.cloud.circuitbreaker.commons.ReactiveCircuitBreaker;
+import org.springframework.util.Assert;
 
 /**
  * @author Jakub Marchwicki
@@ -50,47 +49,31 @@ public class ReactiveFailsafeCircuitBreaker implements ReactiveCircuitBreaker {
 
 	@Override
 	public <T> Mono<T> run(Mono<T> toRun, Function<Throwable, Mono<T>> fallback) {
+		Assert.notNull(fallback, "Feedback function required");
 
 		FailsafeExecutor<T> failsafeExecutor = Failsafe.with(config.getRetryPolicy(),
 			config.getCircuitBreaker());
 		failsafeCustomizer
 			.ifPresent(customizer -> customizer.customize(failsafeExecutor));
 
-		Mono<T> toReturn = toRun
-			.transform(mono ->
-				Mono.fromFuture(mono.toFuture().thenApply(t -> failsafeExecutor.get(() -> t)))
-			);
-
-		if (fallback != null) {
-			toReturn = toReturn.onErrorResume(fallback);
-		}
-		return toReturn;
+		return toRun
+			.flatMap(t -> Mono.fromFuture(failsafeExecutor.getAsync(() -> t)))
+			.onErrorResume(fallback);
 	}
 
 	@Override
 	public <T> Flux<T> run(Flux<T> toRun, Function<Throwable, Flux<T>> fallback) {
+		Assert.notNull(fallback, "Feedback function required");
+
 		FailsafeExecutor<T> failsafeExecutor = Failsafe.with(config.getRetryPolicy(),
 			config.getCircuitBreaker());
 		failsafeCustomizer
 			.ifPresent(customizer -> customizer.customize(failsafeExecutor));
 
-		Flux<T> toReturn = toRun
-			.transform(flux ->
-				Flux.fromStream(
-					flux.toStream().map(t -> failsafeExecutor.get(() -> t))
-				)
-			);
-
-		if (fallback != null) {
-			toReturn = toReturn.onErrorResume(fallback);
-		}
-
-		return toReturn;
-	}
-
-	private <T> CheckedFunction<ExecutionAttemptedEvent<? extends T>, ? extends T> extract(
-		Function<Throwable, T> fallback) {
-		return execution -> fallback.apply(execution.getLastFailure());
+		return toRun
+			.transform(flux -> Flux.fromStream(
+				flux.toStream().map(t -> failsafeExecutor.get(() -> t))))
+			.onErrorResume(fallback);
 	}
 
 }

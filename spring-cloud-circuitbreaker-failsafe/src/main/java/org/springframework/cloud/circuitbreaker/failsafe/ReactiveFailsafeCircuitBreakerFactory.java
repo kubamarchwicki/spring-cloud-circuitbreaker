@@ -32,10 +32,10 @@ import org.springframework.util.Assert;
  * @author Jakub Marchwicki
  */
 public class ReactiveFailsafeCircuitBreakerFactory extends
-	ReactiveCircuitBreakerFactory<FailsafeConfigBuilder.FailsafeConfig, FailsafeConfigBuilder> {
+		ReactiveCircuitBreakerFactory<FailsafeConfigBuilder.FailsafeConfig, FailsafeConfigBuilder> {
 
-	private Function<String, FailsafeConfigBuilder.FailsafeConfig> defaultConfig = id ->
-		new FailsafeConfigBuilder(id).build();
+	private Function<String, FailsafeConfigBuilder.FailsafeConfig> defaultConfig = id -> new FailsafeConfigBuilder(
+			id).build();
 
 	private Map<String, Customizer<FailsafeExecutor>> failsafeCustomizers = new HashMap<>();
 
@@ -46,7 +46,7 @@ public class ReactiveFailsafeCircuitBreakerFactory extends
 
 	@Override
 	public void configureDefault(
-		Function<String, FailsafeConfigBuilder.FailsafeConfig> defaultConfiguration) {
+			Function<String, FailsafeConfigBuilder.FailsafeConfig> defaultConfiguration) {
 		this.defaultConfig = defaultConfiguration;
 	}
 
@@ -54,13 +54,13 @@ public class ReactiveFailsafeCircuitBreakerFactory extends
 	public ReactiveCircuitBreaker create(String id) {
 		Assert.hasText(id, "A circuit breaker must have an id");
 		FailsafeConfigBuilder.FailsafeConfig config = getConfigurations()
-			.computeIfAbsent(id, defaultConfig);
+				.computeIfAbsent(id, defaultConfig);
 		return new ReactiveFailsafeCircuitBreaker(id, config,
-			Optional.ofNullable(failsafeCustomizers.get(id)));
+				Optional.ofNullable(failsafeCustomizers.get(id)));
 	}
 
 	public void addRetryTemplateCustomizers(Customizer<FailsafeExecutor> customizer,
-		String... ids) {
+			String... ids) {
 		for (String id : ids) {
 			this.failsafeCustomizers.put(id, customizer);
 		}

@@ -47,7 +47,7 @@ public class FailsafeAutoConfiguration {
 
 	@Bean
 	@ConditionalOnClass(
-		name = { "reactor.core.publisher.Mono", "reactor.core.publisher.Flux" })
+			name = { "reactor.core.publisher.Mono", "reactor.core.publisher.Flux" })
 	@ConditionalOnMissingBean(ReactiveCircuitBreakerFactory.class)
 	public ReactiveCircuitBreakerFactory reactiveFailsafeCircuitBreakerFactory() {
 		return new ReactiveFailsafeCircuitBreakerFactory();

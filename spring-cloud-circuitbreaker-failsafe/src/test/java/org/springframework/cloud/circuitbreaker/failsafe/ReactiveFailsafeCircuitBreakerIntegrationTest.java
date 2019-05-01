@@ -55,7 +55,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = RANDOM_PORT,
-	classes = ReactiveFailsafeCircuitBreakerIntegrationTest.Application.class)
+		classes = ReactiveFailsafeCircuitBreakerIntegrationTest.Application.class)
 @DirtiesContext
 public class ReactiveFailsafeCircuitBreakerIntegrationTest {
 
@@ -78,20 +78,20 @@ public class ReactiveFailsafeCircuitBreakerIntegrationTest {
 	@Test
 	public void slow_consumer() throws Exception {
 		StepVerifier.withVirtualTime(() -> service.slow()).expectSubscription()
-			.expectNoEvent(Duration.ofSeconds(1)).expectNext("fallback")
-			.expectComplete().verify();
+				.expectNoEvent(Duration.ofSeconds(1)).expectNext("fallback")
+				.expectComplete().verify();
 	}
 
 	@Test
 	public void normal_flux_consumer() throws Exception {
 		StepVerifier.create(service.normalFlux()).expectNext("normalflux")
-			.verifyComplete();
+				.verifyComplete();
 	}
 
 	@Test
 	public void slow_flux_consumer() throws Exception {
 		StepVerifier.create(service.slowFlux()).expectNext("fluxfallback")
-			.verifyComplete();
+				.verifyComplete();
 	}
 
 	@Configuration
@@ -121,13 +121,12 @@ public class ReactiveFailsafeCircuitBreakerIntegrationTest {
 
 		@Bean
 		public Customizer<ReactiveFailsafeCircuitBreakerFactory> factoryCustomizer() {
-			return factory -> factory.configureDefault(
-				id -> new FailsafeConfigBuilder(id)
+			return factory -> factory.configureDefault(id -> new FailsafeConfigBuilder(id)
 					.retryPolicy(new RetryPolicy<>().withMaxAttempts(1))
 					.circuitBreaker(new net.jodah.failsafe.CircuitBreaker<>()
-						.handle(Exception.class).withFailureThreshold(1)
-						.withTimeout(Duration.ofSeconds(2))
-						.withDelay(Duration.ofMinutes(1)))
+							.handle(Exception.class).withFailureThreshold(1)
+							.withTimeout(Duration.ofSeconds(2))
+							.withDelay(Duration.ofMinutes(1)))
 					.build());
 		}
 
@@ -137,10 +136,11 @@ public class ReactiveFailsafeCircuitBreakerIntegrationTest {
 			private int port = 0;
 
 			private ReactiveCircuitBreakerFactory cbFactory;
+
 			private TcpClient timeoutClient = TcpClient.create()
-				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
-				.doOnConnected(con -> con.addHandlerLast(new ReadTimeoutHandler(1))
-					.addHandlerLast(new WriteTimeoutHandler(1)));
+					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
+					.doOnConnected(con -> con.addHandlerLast(new ReadTimeoutHandler(1))
+							.addHandlerLast(new WriteTimeoutHandler(1)));
 
 			DemoControllerService(ReactiveCircuitBreakerFactory cbFactory) {
 				this.cbFactory = cbFactory;
@@ -148,31 +148,36 @@ public class ReactiveFailsafeCircuitBreakerIntegrationTest {
 
 			public Mono<String> slow() {
 				return WebClient.builder()
-					.clientConnector(new ReactorClientHttpConnector(HttpClient.from(timeoutClient)))
-					.baseUrl("http://localhost:" + port).build()
-					.get().uri("/slow").retrieve().bodyToMono(String.class)
-					.transform(it -> cbFactory.create("slow").run(it, t -> Mono.just("fallback")));
+						.clientConnector(new ReactorClientHttpConnector(
+								HttpClient.from(timeoutClient)))
+						.baseUrl("http://localhost:" + port).build().get().uri("/slow")
+						.retrieve().bodyToMono(String.class).transform(it -> cbFactory
+								.create("slow").run(it, t -> Mono.just("fallback")));
 			}
 
 			public Mono<String> normal() {
 				return WebClient.builder().baseUrl("http://localhost:" + port).build()
-					.get().uri("/normal").retrieve().bodyToMono(String.class)
-					.transform(it -> cbFactory.create("normal").run(it, t -> Mono.just("fallback")));
+						.get().uri("/normal").retrieve().bodyToMono(String.class)
+						.transform(it -> cbFactory.create("normal").run(it,
+								t -> Mono.just("fallback")));
 			}
 
 			public Flux<String> slowFlux() {
 				return WebClient.builder()
-					.clientConnector(new ReactorClientHttpConnector(HttpClient.from(timeoutClient)))
-					.baseUrl("http://localhost:" + port).build()
-					.get().uri("/slowflux").retrieve()
-					.bodyToFlux(new ParameterizedTypeReference<String>() {
-					}).transform(it -> cbFactory.create("slowflux").run(it, t -> Flux.just("fluxfallback")));
+						.clientConnector(new ReactorClientHttpConnector(
+								HttpClient.from(timeoutClient)))
+						.baseUrl("http://localhost:" + port).build().get()
+						.uri("/slowflux").retrieve()
+						.bodyToFlux(new ParameterizedTypeReference<String>() {
+						}).transform(it -> cbFactory.create("slowflux").run(it,
+								t -> Flux.just("fluxfallback")));
 			}
 
 			public Flux<String> normalFlux() {
 				return WebClient.builder().baseUrl("http://localhost:" + port).build()
-					.get().uri("/normalflux").retrieve().bodyToFlux(String.class)
-					.transform(it -> cbFactory.create("normalflux").run(it, t -> Flux.just("fluxfallback")));
+						.get().uri("/normalflux").retrieve().bodyToFlux(String.class)
+						.transform(it -> cbFactory.create("normalflux").run(it,
+								t -> Flux.just("fluxfallback")));
 			}
 
 			public void setPort(int port) {
